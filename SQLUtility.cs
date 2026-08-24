@@ -1,8 +1,6 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace CPUFramework
@@ -55,6 +53,43 @@ namespace CPUFramework
         public static void ExecuteSQL(string sqlstatement)
         {
             GetDataTable(sqlstatement);
+        }
+
+        private static string ParseConstraintMessage(string msg)
+        {
+            string origmsg = msg;
+            string prefix = "ck_";
+            string msgend = "";
+            if (msg.Contains(prefix) == false)
+            {
+                if (msg.Contains("u_"))
+                {
+                    prefix = "u_";
+                    msgend = " must be unique";
+                }
+                else if (msg.Contains("f_"))
+                {
+                    prefix = "f_";
+                }
+            }
+            if (msg.Contains(prefix))
+            {
+                msg = msg.Replace("\"", "'");
+                int pos = msg.IndexOf(prefix) + prefix.Length;
+                msg = msg.Substring(pos);
+                pos = msg.IndexOf("'");
+                if (pos == -1)
+                {
+                    msg = origmsg;
+                }
+                else
+                {
+                    msg = msg.Substring(0, pos);
+                    msg = msg.Replace("_", " ");
+                    msg = msg + msgend;
+                }
+            }
+            return msg;
         }
 
         public static int GetFirstColumnFirstRowValue(string sql)
@@ -132,41 +167,6 @@ namespace CPUFramework
                 }
             }
         }
-        private static string ParseConstraintMessage(string msg)
-        {
-            string origmsg = msg;
-            string prefix = "ck_";
-            string msgend = "";
-            if (msg.Contains(prefix) == false)
-            {
-                if (msg.Contains("u_"))
-                {
-                    prefix = "u_";
-                    msgend = " must be unique";
-                }
-                else if (msg.Contains("f_"))
-                {
-                    prefix = "f_";
-                }
-            }
-            if (msg.Contains(prefix))
-            {
-                msg = msg.Replace("\"", "'");
-                int pos = msg.IndexOf(prefix) + prefix.Length;
-                msg = msg.Substring(pos);
-                pos = msg.IndexOf("'");
-                if (pos == -1)
-                {
-                    msg = origmsg;
-                }
-                else
-                {
-                    msg = msg.Substring(0, pos);
-                    msg = msg.Replace("_", " ");
-                    msg = msg + msgend;
-                }
-            }
-            return msg;
-        }
+        
     }
 }
