@@ -24,6 +24,10 @@ namespace CPUFramework
 
         public static DataTable GetDataTable(SqlCommand cmd)
         {
+            return DoExecuteSql(cmd, true);
+        }
+        private static DataTable DoExecuteSql(SqlCommand cmd, bool loadtable)
+        {
 
             DataTable dt = new();
             using (SqlConnection conn = new SqlConnection(SQLUtility.ConnectionString))
@@ -34,12 +38,19 @@ namespace CPUFramework
                 try
                 {
                     SqlDataReader dr = cmd.ExecuteReader();
-                    dt.Load(dr);
+                    if (loadtable == true)
+                    {
+                        dt.Load(dr);
+                    }
                 }
                 catch (SqlException ex)
                 {
                     string msg = ParseConstraintMessage(ex.Message);
                     throw new Exception(msg);
+                }
+                catch (InvalidCastException ex)
+                {
+                    throw new Exception(cmd.CommandText + ": " + ex.Message, ex);
                 }
             }
             SetAllColumnsAllowNull(dt);
@@ -47,12 +58,29 @@ namespace CPUFramework
         }
         public static DataTable GetDataTable(string sqlstatement)
         {
-            return GetDataTable(new SqlCommand(sqlstatement));
+            return DoExecuteSql(new SqlCommand(sqlstatement), true);
+        }
+
+        public static void ExecuteSQL(SqlCommand cmd)
+        {
+            DoExecuteSql(cmd, false);
         }
 
         public static void ExecuteSQL(string sqlstatement)
         {
             GetDataTable(sqlstatement);
+        }
+
+        public static void SetParamValue(SqlCommand cmd, string paramname, object value)
+        {
+            try
+            {
+                cmd.Parameters[paramname].Value = value;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(cmd.CommandText + ": " + ex.Message, ex);
+            }
         }
 
         private static string ParseConstraintMessage(string msg)
@@ -87,6 +115,15 @@ namespace CPUFramework
                     msg = msg.Substring(0, pos);
                     msg = msg.Replace("_", " ");
                     msg = msg + msgend;
+
+                    if (prefix == "f_")
+                    {
+                        var words = msg.Split(" ");
+                        if (words.Length > 1)
+                        {
+                            msg = $"Cannot delete {words[0]} because it has a related {words[1]} record.";
+                        }
+                    }
                 }
             }
             return msg;
@@ -167,6 +204,6 @@ namespace CPUFramework
                 }
             }
         }
-        
+
     }
 }
